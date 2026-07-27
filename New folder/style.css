@@ -1,0 +1,244 @@
+/* ============================================================
+   158 · Habit Tracker  —  Dark Bento Dashboard
+   ============================================================ */
+
+:root {
+  --bg:          #0a0a0c;
+  --bg-2:        #0f0f13;
+  --card:        #141419;
+  --card-2:      #17171d;
+  --stroke:      #23232b;
+  --stroke-soft: #1c1c22;
+
+  --dim:         #2a2a33;   /* uncompleted day */
+  --dim-hover:   #3a3a46;
+
+  --accent:      #39ff14;   /* neon green */
+  --accent-2:    #7dffb0;
+  --accent-glow: rgba(57, 255, 20, 0.55);
+
+  --text:        #f4f4f6;
+  --muted:       #8a8a97;
+  --faint:       #5a5a66;
+
+  --radius:      22px;
+  --gap:         18px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { height: 100%; }
+
+body {
+  font-family: "Sora", system-ui, -apple-system, sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(900px 600px at 12% -10%, rgba(57,255,20,0.07), transparent 60%),
+    radial-gradient(1000px 700px at 110% 10%, rgba(60,120,255,0.06), transparent 55%),
+    var(--bg);
+  min-height: 100vh;
+  padding: clamp(14px, 3vw, 34px);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- Bento grid ---------- */
+.app {
+  max-width: 1180px;
+  margin: 0 auto;
+  display: grid;
+  gap: var(--gap);
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-areas:
+    "header   header   header"
+    "circular circular calendar"
+    "blocks   blocks   blocks";
+}
+
+.header   { grid-area: header;   }
+.circular { grid-area: circular; }
+.calendar { grid-area: calendar; }
+.blocks   { grid-area: blocks;   }
+
+/* ---------- Card base ---------- */
+.card {
+  position: relative;
+  background: linear-gradient(160deg, var(--card), var(--card-2));
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius);
+  padding: clamp(18px, 2.4vw, 30px);
+  overflow: hidden;
+}
+
+.card-tag {
+  position: absolute;
+  top: 16px; right: 18px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--faint);
+  font-weight: 600;
+}
+
+/* ---------- Header ---------- */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--accent-2);
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.progress {
+  font-size: clamp(52px, 9vw, 96px);
+  font-weight: 800;
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+}
+.count {
+  color: var(--accent);
+  text-shadow: 0 0 26px var(--accent-glow);
+}
+.slash, .total { color: var(--faint); font-weight: 700; }
+
+.subtitle { margin-top: 12px; color: var(--muted); font-size: 14px; font-weight: 300; }
+
+/* progress ring */
+.ring { position: relative; width: 120px; height: 120px; flex: none; }
+.ring svg { transform: rotate(-90deg); width: 100%; height: 100%; }
+.ring-bg { fill: none; stroke: var(--stroke); stroke-width: 9; }
+.ring-fg {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 9;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 6px var(--accent-glow));
+  transition: stroke-dashoffset 0.5s cubic-bezier(.4,0,.2,1);
+}
+.ring-label {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 700; color: var(--text);
+}
+
+/* ---------- Circular view ---------- */
+.circular { display: flex; align-items: center; justify-content: center; min-height: 340px; }
+.circle-svg { width: 100%; max-width: 460px; height: auto; overflow: visible; }
+
+.dash {
+  cursor: pointer;
+  transition: stroke 0.18s ease, filter 0.18s ease, opacity 0.18s ease;
+  stroke: var(--dim);
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+.dash:hover { stroke: var(--dim-hover); }
+.dash.done {
+  stroke: var(--accent);
+  filter: drop-shadow(0 0 5px var(--accent-glow));
+}
+
+.circle-center {
+  position: absolute;
+  display: flex; flex-direction: column; align-items: center;
+  pointer-events: none;
+}
+.circle-center-num {
+  font-size: clamp(40px, 6vw, 60px);
+  font-weight: 800; color: var(--text); line-height: 1;
+}
+.circle-center-sub {
+  font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--muted); margin-top: 6px;
+}
+
+/* ---------- Calendar view ---------- */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px 22px;
+  margin-top: 8px;
+}
+.month { }
+.month-name {
+  font-size: 12px; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 9px;
+}
+.month-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+}
+.cell-pad { aspect-ratio: 1; }
+
+/* ---------- Day dots / squares (shared block + calendar) ---------- */
+.day {
+  aspect-ratio: 1;
+  border-radius: 4px;
+  background: var(--dim);
+  cursor: pointer;
+  transition: background 0.16s ease, transform 0.12s ease, box-shadow 0.16s ease;
+}
+.day:hover { background: var(--dim-hover); transform: scale(1.14); }
+.day.done {
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent-glow), inset 0 0 4px rgba(255,255,255,0.25);
+}
+.calendar .day { border-radius: 50%; }
+
+/* ---------- Block view ---------- */
+.blocks-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(0, 1fr));
+  grid-template-columns: repeat(30, 1fr);
+  gap: 7px;
+  margin-top: 8px;
+}
+.blocks .day { border-radius: 5px; }
+
+/* ---------- Footer ---------- */
+.footer { grid-column: 1 / -1; display: flex; justify-content: center; margin-top: 4px; }
+.reset {
+  background: transparent;
+  border: 1px solid var(--stroke);
+  color: var(--muted);
+  padding: 11px 22px;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.reset:hover { border-color: #ff5964; color: #ff8088; }
+
+/* ============================================================
+   Responsive
+   ============================================================ */
+@media (max-width: 860px) {
+  .app {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "header"
+      "circular"
+      "calendar"
+      "blocks";
+  }
+  .blocks-grid { grid-template-columns: repeat(20, 1fr); }
+}
+
+@media (max-width: 520px) {
+  .header { flex-direction: column; align-items: flex-start; }
+  .ring { width: 92px; height: 92px; }
+  .calendar-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .blocks-grid { grid-template-columns: repeat(14, 1fr); gap: 6px; }
+  .card-tag { position: static; display: block; margin-bottom: 10px; }
+}
