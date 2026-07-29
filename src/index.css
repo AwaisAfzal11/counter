@@ -1,0 +1,475 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-void: #07080a; /* page background */
+  --color-iron: #0e1013; /* card surfaces */
+  --color-gunmetal: #1a1d22; /* borders, tracks, future-day outlines */
+  --color-ash: #2e3238; /* SPENT days — warm-shifted grey, reads as burnt */
+  --color-bone: #e8e4da; /* primary text — warm off-white, never #FFF */
+  --color-bone-dim: #7e7a6e; /* secondary text, labels */
+  --color-ember: #ff5a1f; /* pressure, drain, loss, urgency — PRIMARY accent */
+  --color-signal: #2fe36a; /* live / concluded ONLY — the RARE accent */
+
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+  --font-sans: 'Sora', system-ui, -apple-system, sans-serif;
+
+  --radius-card: 10px;
+}
+
+/* ─── Base ─────────────────────────────────────────────────────────────── */
+
+html {
+  background: var(--color-void);
+  color-scheme: dark;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-void);
+  color: var(--color-bone);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
+}
+
+/* Digits must never jitter on the tick. */
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+.label {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 11px;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--color-bone-dim);
+}
+
+.micro {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+}
+
+.card {
+  background: var(--color-iron);
+  border: 1px solid var(--color-gunmetal);
+  border-radius: var(--radius-card);
+  padding: 20px;
+}
+
+:where(button):focus-visible,
+:where(a):focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--color-ember);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-ember) 40%, transparent);
+  color: var(--color-bone);
+}
+
+/* ─── Drain bar ────────────────────────────────────────────────────────── */
+/* One state update per second; CSS interpolates between ticks. */
+
+.drain {
+  position: relative;
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--color-gunmetal);
+  overflow: hidden;
+}
+
+.drain__fill {
+  height: 100%;
+  width: var(--fill, 0%);
+  border-radius: 999px;
+  background: var(--color-ember);
+  transition: width 1000ms linear;
+}
+
+.drain--sm {
+  height: 5px;
+}
+
+.drain--ash .drain__fill {
+  background: var(--color-ash);
+}
+
+.drain--closing .drain__fill {
+  animation: pulse-fast 1.2s ease-in-out infinite;
+}
+
+/* DORMANT: flat track, no fill, a thin signal line sweeping every 3s. */
+.drain--dormant::after {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  width: 18%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--color-signal) 70%, transparent),
+    transparent
+  );
+  animation: sweep 3s linear infinite;
+}
+
+/* ─── Animations ───────────────────────────────────────────────────────── */
+
+@keyframes pulse-live {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes pulse-fast {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@keyframes sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(600%);
+  }
+}
+
+@keyframes glow-today {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 6px color-mix(in srgb, var(--color-signal) 70%, transparent);
+  }
+  50% {
+    opacity: 0.55;
+    box-shadow: 0 0 2px color-mix(in srgb, var(--color-signal) 30%, transparent);
+  }
+}
+
+@keyframes odometer {
+  from {
+    transform: translateY(0.5em);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes flare {
+  0%,
+  100% {
+    border-color: var(--color-gunmetal);
+  }
+  50% {
+    border-color: var(--color-ember);
+  }
+}
+
+@keyframes window-open-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes toast-in {
+  from {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes banner-breathe {
+  0%,
+  100% {
+    border-color: color-mix(in srgb, var(--color-ember) 55%, transparent);
+  }
+  50% {
+    border-color: color-mix(in srgb, var(--color-ember) 18%, transparent);
+  }
+}
+
+@keyframes seal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes type-in {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+.pulse-live {
+  animation: pulse-live 2s ease-in-out infinite;
+}
+
+.odometer {
+  animation: odometer 400ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.flare {
+  animation: flare 700ms ease-in-out 2;
+}
+
+/* ─── Hero ─────────────────────────────────────────────────────────────── */
+
+.day-number {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(120px, 34vw, 190px);
+  line-height: 0.82;
+  letter-spacing: -0.04em;
+  color: var(--color-bone);
+}
+
+.hero-metric {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(38px, 11vw, 54px);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.card-metric {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-size: 24px;
+  line-height: 1;
+}
+
+/* ─── Grid view ────────────────────────────────────────────────────────── */
+
+.grid-158 {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18px, 1fr));
+  column-gap: 4px;
+  row-gap: 8px;
+}
+
+.grid-cell {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 2px;
+}
+
+.grid-cell--seam {
+  margin-left: 6px;
+}
+
+.grid-cell--spent {
+  background: var(--color-ash);
+}
+
+.grid-cell--ahead {
+  border: 1px solid var(--color-gunmetal);
+}
+
+.grid-cell--today {
+  background: var(--color-signal);
+  border: 1px solid var(--color-signal);
+  animation: glow-today 2s ease-in-out infinite;
+}
+
+.grid-tick {
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  width: 1px;
+  height: 4px;
+  background: var(--color-ember);
+  transform: translateX(-50%);
+}
+
+/* ─── Ring view ────────────────────────────────────────────────────────── */
+
+.ring-today {
+  animation: pulse-live 2s ease-in-out infinite;
+}
+
+/* ─── Months view ──────────────────────────────────────────────────────── */
+
+.months {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
+  gap: 18px 14px;
+}
+
+.month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+
+.month-cell {
+  aspect-ratio: 1;
+  border-radius: 2px;
+}
+
+.month-cell--outside {
+  background: var(--color-gunmetal);
+  opacity: 0.2;
+  border-radius: 999px;
+  transform: scale(0.4);
+}
+
+.month-cell--spent {
+  background: var(--color-ash);
+}
+
+.month-cell--ahead {
+  border: 1px solid color-mix(in srgb, var(--color-bone-dim) 45%, transparent);
+}
+
+.month-cell--today {
+  background: var(--color-signal);
+  outline: 1px solid var(--color-ember);
+  outline-offset: 1px;
+  animation: glow-today 2s ease-in-out infinite;
+}
+
+/* ─── Tabs ─────────────────────────────────────────────────────────────── */
+
+.tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border: 1px solid var(--color-gunmetal);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  background: var(--color-iron);
+}
+
+.tab {
+  padding: 11px 4px;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--color-bone-dim);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: color 160ms ease, background 160ms ease;
+}
+
+.tab + .tab {
+  border-left: 1px solid var(--color-gunmetal);
+}
+
+.tab[aria-selected='true'] {
+  color: var(--color-bone);
+  background: color-mix(in srgb, var(--color-ember) 12%, transparent);
+  box-shadow: inset 0 -2px 0 var(--color-ember);
+}
+
+/* ─── Milestone banner ─────────────────────────────────────────────────── */
+
+.milestone {
+  border: 1px solid color-mix(in srgb, var(--color-ember) 55%, transparent);
+  background: color-mix(in srgb, var(--color-ember) 8%, var(--color-void));
+  color: var(--color-ember);
+  animation: banner-breathe 4s ease-in-out infinite;
+}
+
+/* ─── Events ───────────────────────────────────────────────────────────── */
+
+.toast {
+  animation: toast-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.act-takeover {
+  animation: seal-in 500ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.type-in {
+  animation: type-in 900ms steps(24, end) 300ms both;
+}
+
+.window-open-flash::after {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--color-signal) 80%, transparent),
+    transparent
+  );
+  animation: window-open-sweep 900ms ease-out 1;
+}
+
+/* ─── Deferred layers ──────────────────────────────────────────────────── */
+
+.deferred {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 420px;
+}
+
+/* ─── Reduced motion ───────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+
+  .drain--dormant::after,
+  .window-open-flash::after {
+    display: none;
+  }
+
+  .grid-cell--today,
+  .month-cell--today,
+  .pulse-live,
+  .ring-today {
+    opacity: 1;
+  }
+}
