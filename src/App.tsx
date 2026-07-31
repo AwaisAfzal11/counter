@@ -6,11 +6,12 @@ import { NestedPressure } from './components/layer2/NestedPressure';
 import { FrontTabs } from './components/layer3/FrontTabs';
 import { Chronicle } from './components/layer4/Chronicle';
 import { FieldDoctrine } from './components/layer5/FieldDoctrine';
+import { LearningLibrary } from './components/layer6/LearningLibrary';
 import { ActTransition } from './components/events/ActTransition';
 import { Toast } from './components/events/Toast';
 
 export function App() {
-  const { phase, dayIndex, milestone, doctrine } = useClock();
+  const { now, phase, dayIndex, milestone } = useClock();
   const { actTransition, toast, dismissActTransition } = useClockEvents();
 
   return (
@@ -37,9 +38,12 @@ export function App() {
               <Chronicle dayIndex={dayIndex} phase={phase} />
             </div>
             <div className="deferred">
-              <FieldDoctrine line={doctrine} />
+              <FieldDoctrine now={now} />
             </div>
           </div>
+        </div>
+        <div className="deferred mt-6 pb-12">
+          <LearningLibrary now={now} />
         </div>
       </div>
 

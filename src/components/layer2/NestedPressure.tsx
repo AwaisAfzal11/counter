@@ -1,5 +1,5 @@
 import { useClock } from '../../context/ClockContext';
-import { formatDuration, formatHours, formatPercent } from '../../lib/format';
+import { formatDuration } from '../../lib/format';
 import { PressureRow } from './PressureRow';
 import { WeekdayDots } from './WeekdayDots';
 
@@ -9,7 +9,7 @@ import { WeekdayDots } from './WeekdayDots';
  * hours from some boundary.
  */
 export function NestedPressure() {
-  const { phase, window: w, battle, act, campaign } = useClock();
+  const { phase, window: w, battle } = useClock();
   const live = phase === 'ACTIVE';
 
   return (
@@ -36,22 +36,6 @@ export function NestedPressure() {
         }
       />
 
-      <PressureRow
-        label={`Act ${act.roman}`}
-        figure={`${act.remainingDays} days left`}
-        remaining={act.remainingFraction}
-      />
-
-      <PressureRow
-        label="Campaign"
-        figure={
-          <>
-            {formatHours(campaign.windowMsRemaining)}h left
-            <span className="text-bone-dim"> · {formatPercent(campaign.fractionSpent)} burned</span>
-          </>
-        }
-        remaining={1 - campaign.fractionSpent}
-      />
     </section>
   );
 }

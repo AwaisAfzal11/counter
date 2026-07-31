@@ -3,9 +3,8 @@ import { useTabPersistence } from '../../hooks/useTabPersistence';
 import type { Phase } from '../../lib/time';
 import { GridView } from './GridView';
 import { MonthsView } from './MonthsView';
-import { RingView } from './RingView';
 
-const TABS = ['GRID', 'RING', 'MONTHS'] as const;
+const TABS = ['GRID', 'MONTHS'] as const;
 type Tab = (typeof TABS)[number];
 
 const SWIPE_THRESHOLD = 48;
@@ -72,7 +71,6 @@ export function FrontTabs({ dayIndex, phase }: { dayIndex: number; phase: Phase 
         onTouchEnd={onTouchEnd}
       >
         {tab === 'GRID' && <GridView dayIndex={dayIndex} phase={phase} />}
-        {tab === 'RING' && <RingView dayIndex={dayIndex} phase={phase} />}
         {tab === 'MONTHS' && <MonthsView dayIndex={dayIndex} phase={phase} />}
       </div>
     </section>

@@ -1,4 +1,4 @@
-import { CAMPAIGN, WEEKDAY_NAMES } from '../../lib/constants';
+import { CAMPAIGN } from '../../lib/constants';
 import { formatCount } from '../../lib/format';
 import { useClock, useClockEvents } from '../../context/ClockContext';
 import { LiveDot } from './LiveDot';
@@ -10,7 +10,7 @@ import { LocalClock } from './LocalClock';
  * completion and pull against the drain philosophy.
  */
 export function HeroCounter() {
-  const { now, phase, dayIndex, daysSealed, daysAhead, weekday, battle, act } = useClock();
+  const { now, phase, dayIndex, daysSealed, daysAhead } = useClock();
   const { rolloverKey } = useClockEvents();
 
   const pre = phase === 'PRE';
@@ -38,18 +38,11 @@ export function HeroCounter() {
         <span className="h-px flex-1 bg-gunmetal" aria-hidden="true" />
       </div>
 
-      <div className="mt-4 space-y-1.5 text-center">
-        {pre ? (
+      {pre && (
+        <div className="mt-4 text-center">
           <p className="label">The campaign begins Jul 27, 2026.</p>
-        ) : (
-          <p className="label">
-            {WEEKDAY_NAMES[weekday]} · Battle {battle.index} of 23
-          </p>
-        )}
-        <p className="label">
-          Act {act.roman} — <span style={{ color: 'var(--color-ember)' }}>{act.name}</span>
-        </p>
-      </div>
+        </div>
+      )}
 
       <div className="mt-5 flex items-end justify-between">
         <LocalClock now={now} />

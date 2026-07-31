@@ -11,8 +11,9 @@ export function LocalClock({ now }: { now: Date }) {
 
   return (
     <div className="flex items-baseline gap-1.5">
-      <span className="num text-[19px] font-semibold text-bone">{time}</span>
-      <span className="num text-[11px] text-bone-dim opacity-60">:{seconds}</span>
+      <span className="num text-[22px] font-semibold text-bone">
+        {time}:{seconds}
+      </span>
       <span className="label">{meridiem}</span>
       {tz && <span className="label opacity-55">{tz}</span>}
     </div>

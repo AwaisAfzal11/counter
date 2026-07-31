@@ -375,7 +375,7 @@ body {
 
 .tabs {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   border: 1px solid var(--color-gunmetal);
   border-radius: var(--radius-card);
   overflow: hidden;
@@ -404,6 +404,83 @@ body {
   color: var(--color-bone);
   background: color-mix(in srgb, var(--color-ember) 12%, transparent);
   box-shadow: inset 0 -2px 0 var(--color-ember);
+}
+
+/* ─── Scrollable reading surfaces ─────────────────────────────────────── */
+
+.doctrine-scroll {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(82%, 1fr);
+  gap: 10px;
+  overflow-x: auto;
+  padding: 2px 1px 10px;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-ash) transparent;
+}
+
+.doctrine-card {
+  min-height: 142px;
+  padding: 18px;
+  background: var(--color-iron);
+  border: 1px solid var(--color-gunmetal);
+  border-radius: var(--radius-card);
+  scroll-snap-align: start;
+}
+
+.doctrine-card--current {
+  border-color: color-mix(in srgb, var(--color-ember) 55%, var(--color-gunmetal));
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-ember) 10%, var(--color-iron)),
+    var(--color-iron) 62%
+  );
+}
+
+.learning-library {
+  padding-top: 26px;
+  border-top: 1px solid var(--color-gunmetal);
+}
+
+.learning-scroll {
+  max-height: 610px;
+  overflow-y: auto;
+  padding-right: 7px;
+  scroll-snap-type: y proximity;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-ash) transparent;
+}
+
+.learning-card {
+  min-height: 260px;
+  padding: 20px;
+  background: var(--color-iron);
+  border: 1px solid var(--color-gunmetal);
+  border-radius: var(--radius-card);
+  scroll-snap-align: start;
+}
+
+.learning-card + .learning-card {
+  margin-top: 10px;
+}
+
+.doctrine-scroll::-webkit-scrollbar,
+.learning-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.doctrine-scroll::-webkit-scrollbar-thumb,
+.learning-scroll::-webkit-scrollbar-thumb {
+  background: var(--color-ash);
+  border-radius: 999px;
+}
+
+@media (min-width: 640px) {
+  .doctrine-scroll {
+    grid-auto-columns: minmax(58%, 1fr);
+  }
 }
 
 /* ─── Milestone banner ─────────────────────────────────────────────────── */
