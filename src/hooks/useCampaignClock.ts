@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { Act } from '../lib/constants';
+import { BLOCKS, type Act } from '../lib/constants';
 import { computeCampaignState, type CampaignState, type WindowState } from '../lib/time';
 
 export interface ClockEvents {
@@ -7,6 +7,8 @@ export interface ClockEvents {
   rolloverKey: number;
   /** Transient flash when the window opens or closes. */
   windowFlash: 'OPEN' | 'CLOSED' | null;
+  /** Index of the block that just sealed. Its bar segment flares once. */
+  sealedBlock: number | null;
   /** Set at an Act boundary; full-screen takeover until dismissed or timed out. */
   actTransition: Act | null;
   /** Battle-concluded toast. */
@@ -28,6 +30,7 @@ export function useCampaignClock(): Clock {
 
   const [rolloverKey, setRolloverKey] = useState(0);
   const [windowFlash, setWindowFlash] = useState<'OPEN' | 'CLOSED' | null>(null);
+  const [sealedBlock, setSealedBlock] = useState<number | null>(null);
   const [actTransition, setActTransition] = useState<Act | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -58,23 +61,36 @@ export function useCampaignClock(): Clock {
     battleIndex: number;
     actIndex: number;
     windowState: WindowState;
+    blocksSealed: number;
   } | null>(null);
 
   const { dayIndex, phase } = state;
   const battleIndex = state.battle.index;
   const actIndex = state.act.index;
   const windowState = state.window.state;
+  const blocksSealed = state.blocks.spentToday;
   const actRef = useRef(state.act);
   actRef.current = state.act;
 
   useEffect(() => {
     const prev = previous.current;
-    previous.current = { dayIndex, battleIndex, actIndex, windowState };
+    previous.current = { dayIndex, battleIndex, actIndex, windowState, blocksSealed };
 
     // Never fire ceremony on first paint — only on a real crossing.
     if (!prev) return;
 
     if (prev.dayIndex !== dayIndex) setRolloverKey((k) => k + 1);
+
+    // Five times a day, a block ends and is named as it goes. The midnight reset
+    // drops the count back to zero, which is not a seal — hence the day guard.
+    if (prev.dayIndex === dayIndex && blocksSealed > prev.blocksSealed && phase === 'ACTIVE') {
+      const sealed = BLOCKS[blocksSealed - 1];
+      setSealedBlock(sealed.index);
+      setToast(
+        `Block ${sealed.index} sealed. ${sealed.name} is unrecoverable. ` +
+          `${5 - blocksSealed} left today.`,
+      );
+    }
 
     if (prev.windowState !== windowState && phase === 'ACTIVE') {
       if (windowState === 'OPEN') setWindowFlash('OPEN');
@@ -88,7 +104,7 @@ export function useCampaignClock(): Clock {
     if (prev.actIndex !== actIndex && actIndex > prev.actIndex) {
       setActTransition(actRef.current);
     }
-  }, [dayIndex, battleIndex, actIndex, windowState, phase]);
+  }, [dayIndex, battleIndex, actIndex, windowState, blocksSealed, phase]);
 
   // Transient timers below are setTimeout, not setInterval — the one-interval
   // rule stands.
@@ -105,6 +121,12 @@ export function useCampaignClock(): Clock {
   }, [toast]);
 
   useEffect(() => {
+    if (sealedBlock === null) return;
+    const id = setTimeout(() => setSealedBlock(null), 2600);
+    return () => clearTimeout(id);
+  }, [sealedBlock]);
+
+  useEffect(() => {
     if (!actTransition) return;
     const id = setTimeout(() => setActTransition(null), 5000);
     return () => clearTimeout(id);
@@ -113,8 +135,8 @@ export function useCampaignClock(): Clock {
   const dismissActTransition = useCallback(() => setActTransition(null), []);
 
   const events = useMemo<ClockEvents>(
-    () => ({ rolloverKey, windowFlash, actTransition, toast, dismissActTransition }),
-    [rolloverKey, windowFlash, actTransition, toast, dismissActTransition],
+    () => ({ rolloverKey, windowFlash, sealedBlock, actTransition, toast, dismissActTransition }),
+    [rolloverKey, windowFlash, sealedBlock, actTransition, toast, dismissActTransition],
   );
 
   return { state, events };

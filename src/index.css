@@ -126,6 +126,344 @@ body {
   animation: sweep 3s linear infinite;
 }
 
+/* ─── Block bar ────────────────────────────────────────────────────────── */
+/* The window cut into its five blocks. Segment width ∝ the block's hours, so
+   the 1h Pivot is a sliver and the 5h Assault is the day's main ground. Each
+   segment drains toward its own right edge: burnt time sweeps left → right
+   across the bar exactly as the clock does. */
+
+.blockbar {
+  --char: color-mix(in srgb, var(--color-ash) 52%, var(--color-void));
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  gap: 3px;
+  height: 16px;
+  overflow: hidden;
+}
+
+.blockbar--sm {
+  height: 9px;
+}
+
+.blockseg {
+  position: relative;
+  flex: var(--span, 1) 1 0;
+  border-radius: 3px;
+  background: var(--char);
+  overflow: hidden;
+}
+
+/* Ink is the one thing that carries block state. Texture never changes with
+   state — a block is recognisable as itself whether it is ahead or in ash. */
+.is-ahead {
+  --ink: color-mix(in srgb, var(--color-bone-dim) 48%, transparent);
+}
+
+.is-active {
+  --ink: var(--color-ember);
+}
+
+.is-spent {
+  --ink: color-mix(in srgb, var(--color-ash) 92%, transparent);
+}
+
+.blockseg__fill {
+  position: absolute;
+  inset-block: 0;
+  right: 0;
+  width: var(--fill, 0%);
+  transition: width 1000ms linear;
+}
+
+/* The burn edge — where this block is being consumed, right now. */
+.blockseg.is-active .blockseg__fill::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 2px;
+  background: var(--color-bone);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--color-ember) 90%, transparent);
+}
+
+.blockseg--closing .blockseg__fill {
+  animation: pulse-fast 1.2s ease-in-out infinite;
+}
+
+.blockseg--sealing {
+  animation: seal-block 700ms ease-out 2;
+}
+
+/* ── The five treatments ─────────────────────────────────────────────────
+   1 dawn  — light coming up: dim at 6 AM, solid by 9
+   2 ribs  — the long assault, ruled into hour-ish columns
+   3 hatch — one hour, drawn at the highest frequency on the bar
+   4 bands — the second push, stacked horizontally
+   5 dusk  — light going out: solid at 6 PM, thinning toward 10          */
+
+[data-tex='dawn'] {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--ink) 22%, transparent), var(--ink));
+}
+
+[data-tex='ribs'] {
+  background: repeating-linear-gradient(
+    90deg,
+    var(--ink) 0 3px,
+    color-mix(in srgb, var(--ink) 18%, transparent) 3px 7px
+  );
+}
+
+[data-tex='hatch'] {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--ink) 0 2px,
+    color-mix(in srgb, var(--ink) 12%, transparent) 2px 5px
+  );
+}
+
+[data-tex='bands'] {
+  background: repeating-linear-gradient(
+    0deg,
+    var(--ink) 0 2px,
+    color-mix(in srgb, var(--ink) 15%, transparent) 2px 5px
+  );
+}
+
+[data-tex='dusk'] {
+  background: linear-gradient(90deg, var(--ink), color-mix(in srgb, var(--ink) 22%, transparent));
+}
+
+/* DORMANT: the whole bar is unclaimed, one line sweeping across all five. */
+.blockbar--dormant::after {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  width: 14%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--color-signal) 60%, transparent),
+    transparent
+  );
+  animation: sweep 3s linear infinite;
+}
+
+.blockrail {
+  display: flex;
+  gap: 3px;
+  margin-top: 5px;
+}
+
+/* The rail does not follow --ink: a sealed block still has to be identifiable
+   as block 3, and ash at 9px is not readable by anyone. */
+.blockrail__no {
+  flex: var(--span, 1) 1 0;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  text-align: center;
+  color: color-mix(in srgb, var(--color-bone-dim) 80%, transparent);
+}
+
+.blockrail__no.is-active {
+  color: var(--color-ember);
+}
+
+.blockrail__no.is-spent {
+  color: color-mix(in srgb, var(--color-ash) 25%, var(--color-bone-dim));
+}
+
+/* ─── Block strip — the block you are standing in ──────────────────────── */
+
+.blockstrip {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-gunmetal);
+}
+
+.blockstrip__tag {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--color-ember);
+}
+
+.blockstrip__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-bone);
+}
+
+.blockstrip__left {
+  font-size: 12px;
+  color: var(--color-ember);
+}
+
+.blockstrip .is-idle {
+  color: var(--color-bone-dim);
+}
+
+/* ─── Block ledger ─────────────────────────────────────────────────────── */
+
+.blockrow {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px 7px 6px;
+  border-left: 2px solid transparent;
+  border-radius: 4px;
+}
+
+.blockrow.is-active {
+  background: color-mix(in srgb, var(--color-ember) 9%, transparent);
+  border-left-color: var(--color-ember);
+}
+
+.blockswatch {
+  height: 18px;
+  border-radius: 2px;
+}
+
+.blockrow__name {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-bone);
+}
+
+.blockrow__name .num {
+  margin-right: 3px;
+  color: var(--color-bone-dim);
+}
+
+.blockrow__status {
+  font-size: 11px;
+  white-space: nowrap;
+  color: var(--color-bone-dim);
+}
+
+.blockrow.is-active .blockrow__name .num,
+.blockrow.is-active .blockrow__status {
+  color: var(--color-ember);
+}
+
+/* Sealed rows are muted but never illegible: a block you cannot read is a block
+   you can write off, and the whole point of the ledger is that you cannot. */
+.blockrow.is-spent .blockrow__name,
+.blockrow.is-spent .blockrow__name .num,
+.blockrow.is-spent .blockrow__status {
+  color: color-mix(in srgb, var(--color-ash) 25%, var(--color-bone-dim));
+}
+
+.blockstake {
+  margin-top: 10px;
+  padding-left: 8px;
+  border-left: 2px solid color-mix(in srgb, var(--color-ember) 45%, transparent);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--color-bone-dim);
+}
+
+/* ─── The battle week ──────────────────────────────────────────────────── */
+/* One cell per day, each carrying its campaign number. Colour comes from
+   getDayState, so a day reads the same here as it does in the grid. */
+
+.battle-metric {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(40px, 12vw, 52px);
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+}
+
+.battledays {
+  display: grid;
+  grid-template-columns: repeat(var(--days, 7), minmax(0, 1fr));
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.battleday {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 0 7px;
+  border: 1px solid var(--color-gunmetal);
+  border-radius: 5px;
+}
+
+.battleday__letter {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 9px;
+  line-height: 1;
+  letter-spacing: 0.1em;
+  color: var(--color-bone-dim);
+}
+
+.battleday__no {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--color-bone);
+}
+
+.battleday--spent {
+  background: color-mix(in srgb, var(--color-ash) 34%, var(--color-void));
+  border-color: transparent;
+}
+
+.battleday--spent .battleday__letter,
+.battleday--spent .battleday__no {
+  color: color-mix(in srgb, var(--color-ash) 30%, var(--color-bone-dim));
+}
+
+/* Today: the one live cell in the week. The pulse is on the ring only, so the
+   number never dims — the whole point is that today is legible. */
+.battleday--today {
+  border-color: var(--color-signal);
+  background: color-mix(in srgb, var(--color-signal) 10%, transparent);
+  animation: pulse-ring 2s ease-in-out infinite;
+}
+
+.battleday--today .battleday__letter,
+.battleday--today .battleday__no {
+  color: var(--color-signal);
+}
+
+/* ─── Day stamp ────────────────────────────────────────────────────────── */
+
+.daystamp {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  text-indent: 0.3em; /* keeps the tracking from shifting the centre */
+  color: var(--color-ember);
+}
+
 /* ─── Animations ───────────────────────────────────────────────────────── */
 
 @keyframes pulse-live {
@@ -145,6 +483,26 @@ body {
   }
   50% {
     opacity: 0.55;
+  }
+}
+
+@keyframes pulse-ring {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-signal) 40%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 9px 1px color-mix(in srgb, var(--color-signal) 26%, transparent);
+  }
+}
+
+@keyframes seal-block {
+  0%,
+  100% {
+    box-shadow: inset 0 0 0 1px transparent;
+  }
+  50% {
+    box-shadow: inset 0 0 0 1px var(--color-ember);
   }
 }
 
@@ -539,12 +897,14 @@ body {
   }
 
   .drain--dormant::after,
+  .blockbar--dormant::after,
   .window-open-flash::after {
     display: none;
   }
 
   .grid-cell--today,
   .month-cell--today,
+  .battleday--today,
   .pulse-live,
   .ring-today {
     opacity: 1;

@@ -1,4 +1,4 @@
-import { CAMPAIGN } from '../../lib/constants';
+import { CAMPAIGN, MONTH_NAMES, WEEKDAY_NAMES } from '../../lib/constants';
 import { formatCount } from '../../lib/format';
 import { useClock, useClockEvents } from '../../context/ClockContext';
 import { LiveDot } from './LiveDot';
@@ -10,7 +10,7 @@ import { LocalClock } from './LocalClock';
  * completion and pull against the drain philosophy.
  */
 export function HeroCounter() {
-  const { now, phase, dayIndex, daysSealed, daysAhead } = useClock();
+  const { now, phase, dayIndex, daysSealed, daysAhead, today, blocks } = useClock();
   const { rolloverKey } = useClockEvents();
 
   const pre = phase === 'PRE';
@@ -38,9 +38,19 @@ export function HeroCounter() {
         <span className="h-px flex-1 bg-gunmetal" aria-hidden="true" />
       </div>
 
-      {pre && (
+      {pre ? (
         <div className="mt-4 text-center">
           <p className="label">The campaign begins Jul 27, 2026.</p>
+        </div>
+      ) : (
+        /* A dated stamp under the counter: today is one specific day, it has a
+           name, it is running, and it is not coming back. */
+        <div className="mt-4 text-center">
+          <p className="label">
+            {WEEKDAY_NAMES[today.weekday]} · {MONTH_NAMES[today.month]} {today.date} ·{' '}
+            {phase === 'POST' ? 'CAMPAIGN CLOSED' : `${blocks.remainingToday} OF 5 BLOCKS LEFT`}
+          </p>
+          <p className="daystamp mt-2">This day does not repeat</p>
         </div>
       )}
 

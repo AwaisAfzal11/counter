@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ACTS, CAMPAIGN } from './constants';
+import { ACTS, BLOCKS, CAMPAIGN, TOTAL_BLOCKS } from './constants';
 import {
   battleLength,
   computeCampaignState,
@@ -7,6 +7,7 @@ import {
   dayStartMs,
   getDayState,
   MS_PER_HOUR,
+  MS_PER_MINUTE,
   pktParts,
   START_MS,
   TOTAL_WINDOW_MS,
@@ -116,6 +117,131 @@ describe('the March Window', () => {
       expect(s.window.remainingMs).toBe(0);
       expect(s.window.remainingFraction).toBe(0);
     }
+  });
+});
+
+describe('the five blocks', () => {
+  it('tiles the window exactly — no gap, no overlap, 16 hours', () => {
+    expect(BLOCKS.reduce((sum, b) => sum + b.hours, 0)).toBe(CAMPAIGN.WINDOW_HOURS_PER_DAY);
+    expect(BLOCKS[0].startHour).toBe(CAMPAIGN.WINDOW_OPEN_HOUR);
+    expect(BLOCKS[BLOCKS.length - 1].endHour).toBe(CAMPAIGN.WINDOW_CLOSE_HOUR);
+    BLOCKS.forEach((block, i) => {
+      expect(block.endHour - block.startHour).toBe(block.hours);
+      expect(block.index).toBe(i + 1);
+      if (i > 0) expect(block.startHour).toBe(BLOCKS[i - 1].endHour);
+    });
+  });
+
+  it('holds the boundaries at 9 AM, 2 PM, 3 PM, 6 PM and 10 PM', () => {
+    const active = (pkt: string) => computeCampaignState(at(pkt)).blocks.current?.block.index ?? null;
+    expect(active('2026-07-29T06:00:00')).toBe(1);
+    expect(active('2026-07-29T08:59:59')).toBe(1);
+    expect(active('2026-07-29T09:00:00')).toBe(2);
+    expect(active('2026-07-29T13:59:59')).toBe(2);
+    expect(active('2026-07-29T14:00:00')).toBe(3);
+    expect(active('2026-07-29T15:00:00')).toBe(4);
+    expect(active('2026-07-29T18:00:00')).toBe(5);
+    expect(active('2026-07-29T21:59:59')).toBe(5);
+    expect(active('2026-07-29T22:00:00')).toBeNull();
+    expect(active('2026-07-29T05:59:59')).toBeNull();
+  });
+
+  it('marks exactly one block ACTIVE while the window is open, and none outside it', () => {
+    for (let hour = 6; hour < 22; hour++) {
+      const states = computeCampaignState(at(`2026-08-11T${String(hour).padStart(2, '0')}:30:00`))
+        .blocks.all.map((b) => b.state);
+      expect(states.filter((s) => s === 'ACTIVE')).toHaveLength(1);
+    }
+    for (const t of ['2026-08-11T03:00:00', '2026-08-11T23:00:00']) {
+      const blocks = computeCampaignState(at(t)).blocks;
+      expect(blocks.all.filter((b) => b.state === 'ACTIVE')).toHaveLength(0);
+      expect(blocks.current).toBeNull();
+    }
+  });
+
+  it('drains each block against its own span, not the window', () => {
+    // 11:30 AM — halfway through the five-hour Assault, ten past the day.
+    const s = computeCampaignState(at('2026-07-29T11:30:00'));
+    const [first, second] = s.blocks.all;
+    expect(first.state).toBe('SPENT');
+    expect(first.remainingMs).toBe(0);
+    expect(second.state).toBe('ACTIVE');
+    expect(second.remainingMs).toBe(2.5 * MS_PER_HOUR);
+    expect(second.remainingFraction).toBeCloseTo(0.5, 10);
+
+    // The Pivot is one hour, so the same clock reading drains it four times faster.
+    const pivot = computeCampaignState(at('2026-07-29T14:30:00')).blocks.all[2];
+    expect(pivot.remainingFraction).toBeCloseTo(0.5, 10);
+    expect(pivot.remainingMs).toBe(0.5 * MS_PER_HOUR);
+  });
+
+  it('reports blocks ahead as whole and tells you when they open', () => {
+    const s = computeCampaignState(at('2026-07-29T06:00:00'));
+    const pivot = s.blocks.all[2];
+    expect(pivot.state).toBe('AHEAD');
+    expect(pivot.remainingFraction).toBe(1);
+    expect(pivot.opensInMs).toBe(8 * MS_PER_HOUR);
+    expect(s.blocks.next?.block.index).toBe(2);
+  });
+
+  it('flags a block as closing for its final fifteen minutes only', () => {
+    expect(computeCampaignState(at('2026-07-29T08:44:00')).blocks.current?.closing).toBe(false);
+    expect(computeCampaignState(at('2026-07-29T08:46:00')).blocks.current?.closing).toBe(true);
+    // Same rule on the one-hour block: fifteen minutes, not a fraction.
+    expect(computeCampaignState(at('2026-07-29T14:44:00')).blocks.current?.closing).toBe(false);
+    expect(computeCampaignState(at('2026-07-29T14:45:00')).blocks.current?.closing).toBe(true);
+  });
+
+  it('counts a block as still yours until it seals', () => {
+    const dawn = computeCampaignState(at('2026-07-29T05:00:00')).blocks;
+    expect(dawn).toMatchObject({ spentToday: 0, remainingToday: 5 });
+
+    const midday = computeCampaignState(at('2026-07-29T13:59:00')).blocks;
+    expect(midday).toMatchObject({ spentToday: 1, remainingToday: 4 });
+
+    const shut = computeCampaignState(at('2026-07-29T22:00:00')).blocks;
+    expect(shut).toMatchObject({ spentToday: 5, remainingToday: 0, current: null, next: null });
+  });
+
+  it('counts 790 blocks in the campaign and never hands one back', () => {
+    expect(TOTAL_BLOCKS).toBe(790);
+    expect(computeCampaignState(at('2026-07-26T12:00:00')).blocks.remainingCampaign).toBe(790);
+    expect(computeCampaignState(at('2026-07-27T00:00:00')).blocks.remainingCampaign).toBe(790);
+    expect(computeCampaignState(at('2027-01-01T00:00:00')).blocks.remainingCampaign).toBe(0);
+
+    // The 6:00 AM refill is the failure mode this guards: dormant counts whole.
+    let previous = Infinity;
+    for (let day = 1; day <= 158; day++) {
+      for (const [hour, minute] of [
+        [0, 0],
+        [5, 59],
+        [6, 0],
+        [9, 1],
+        [14, 1],
+        [15, 1],
+        [18, 1],
+        [22, 0],
+        [23, 59],
+      ] as const) {
+        const value = computeCampaignState(
+          new Date(dayStartMs(day) + hour * MS_PER_HOUR + minute * MS_PER_MINUTE),
+        ).blocks.remainingCampaign;
+        expect(value).toBeLessThanOrEqual(previous);
+        previous = value;
+      }
+    }
+    expect(previous).toBe(0);
+  });
+
+  it('leaves every block unopened before the campaign and sealed after it', () => {
+    const before = computeCampaignState(at('2026-07-01T10:00:00')).blocks;
+    expect(before.all.every((b) => b.state === 'AHEAD')).toBe(true);
+    expect(before.all.every((b) => b.opensInMs === 0)).toBe(true);
+    expect(before.current).toBeNull();
+
+    const after = computeCampaignState(at('2027-02-01T10:00:00')).blocks;
+    expect(after.all.every((b) => b.state === 'SPENT')).toBe(true);
+    expect(after.remainingToday).toBe(0);
   });
 });
 

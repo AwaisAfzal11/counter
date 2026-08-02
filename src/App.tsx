@@ -2,7 +2,8 @@ import { useClock, useClockEvents } from './context/ClockContext';
 import { HeroCounter } from './components/layer0/HeroCounter';
 import { MilestoneBanner } from './components/layer0/MilestoneBanner';
 import { MarchWindow } from './components/layer1/MarchWindow';
-import { NestedPressure } from './components/layer2/NestedPressure';
+import { BlockLedger } from './components/layer1/BlockLedger';
+import { CurrentBattle } from './components/layer2/CurrentBattle';
 import { FrontTabs } from './components/layer3/FrontTabs';
 import { Chronicle } from './components/layer4/Chronicle';
 import { FieldDoctrine } from './components/layer5/FieldDoctrine';
@@ -26,7 +27,10 @@ export function App() {
               <MarchWindow />
             </div>
             <div className="mt-3">
-              <NestedPressure />
+              <BlockLedger />
+            </div>
+            <div className="mt-3">
+              <CurrentBattle />
             </div>
           </div>
 

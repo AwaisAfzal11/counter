@@ -8,6 +8,27 @@ switcher, and it never changes data.
 
 Bars drain, they do not fill. The grid burns down from 158 to 0.
 
+## The five blocks
+
+The 16-hour window is not one slab. It is five named blocks that tile 6:00 AM → 10:00 PM
+with no gap, because a gap is an hour the app quietly forgives:
+
+| # | Block | Span | Hours | Bar treatment |
+|---|---|---|---|---|
+| 1 | FIRST LIGHT | 6:00 — 9:00 AM | 3 | `dawn` — dim at 6, solid by 9 |
+| 2 | THE MAIN ASSAULT | 9:00 AM — 2:00 PM | 5 | `ribs` — ruled columns |
+| 3 | THE PIVOT | 2:00 — 3:00 PM | 1 | `hatch` — the bar's highest frequency |
+| 4 | SECOND PUSH | 3:00 — 6:00 PM | 3 | `bands` — stacked horizontally |
+| 5 | LAST WATCH | 6:00 — 10:00 PM | 4 | `dusk` — solid at 6, thinning to 10 |
+
+Segment width is proportional to the block's hours, so the 1-hour Pivot is visibly a sliver
+and the 5-hour Assault is visibly the day's main ground. Each segment drains toward its own
+right edge, so burnt time sweeps left → right across the bar exactly as the clock does.
+
+Every block is accounted for by name in the ledger, and each seals with a named toast — five
+reminders a day that something just became unrecoverable. The campaign holds 790 of them
+(158 × 5); the counter steps down five times a day and never once goes up.
+
 ## Commands
 
 ```bash
@@ -26,7 +47,7 @@ npm run dev
 
 ```
 src/
-├── lib/constants.ts   CAMPAIGN, ACTS, DOCTRINE, MILESTONES
+├── lib/constants.ts   CAMPAIGN, BLOCKS, ACTS, DOCTRINE, MILESTONES
 ├── lib/time.ts        the engine — pure, fully unit-tested
 ├── lib/format.ts      12h clock, durations, hours, percentages
 ├── hooks/             the single setInterval; the only localStorage write
@@ -45,7 +66,20 @@ is testable by passing a fake instant — see `src/lib/time.test.ts`.
   interpolating between ticks.
 - **All campaign math is fixed UTC+5** (PKT, no DST). The Layer-0 clock shows *device-local*
   12-hour time with its timezone label, so travelling never shifts the day counter.
-- **`getDayState()` is the single source of colour truth** for every day-shaped node.
+- **`getDayState()` is the single source of colour truth** for every day-shaped node —
+  grid, ring, calendar and the battle-week cells. **`getBlockState()` is its twin** for every
+  block-shaped node: bar segments and ledger rows. A block cannot read sealed in one place
+  and ahead in another.
+
+## Two additions beyond the spec
+
+The spec treats the window as one 16-hour slab and Layer 2 as four stacked pressure rows.
+Both were changed on request:
+
+- **The window is subdivided into the five blocks above**, with a segmented, per-block bar.
+- **Layer 2 is now the current battle alone** — the Block and Today rows were removed as
+  duplicates of Layer 1, and the week is given a full card: a large days-left figure, the
+  battle's date range, and a cell per day carrying its campaign number.
 
 ## One deviation from the spec
 

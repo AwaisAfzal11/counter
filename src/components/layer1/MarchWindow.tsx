@@ -1,14 +1,14 @@
 import { useClock, useClockEvents } from '../../context/ClockContext';
 import { formatDuration, formatLongDuration } from '../../lib/format';
-import { DrainBar } from './DrainBar';
+import { BlockBar } from './BlockBar';
 
 /**
  * The emotional center of the app: a huge static day number above a visibly
  * emptying bar. Spend the design budget here.
  */
 export function MarchWindow() {
-  const { phase, dayIndex, window: w, startsInMs } = useClock();
-  const { windowFlash } = useClockEvents();
+  const { phase, dayIndex, window: w, blocks, startsInMs } = useClock();
+  const { windowFlash, sealedBlock } = useClockEvents();
 
   const closed = w.state === 'CLOSED';
 
@@ -88,17 +88,43 @@ export function MarchWindow() {
         )}
       </div>
 
-      <div className={`relative mt-5 ${windowFlash === 'OPEN' ? 'window-open-flash' : ''}`}>
-        <DrainBar
-          remaining={phase === 'PRE' ? 0 : w.remainingFraction}
+      <div className="blockstrip mt-5">
+        {blocks.current ? (
+          <>
+            <span className="blockstrip__tag num">BLOCK {blocks.current.block.index}</span>
+            <span className="blockstrip__name">{blocks.current.block.name}</span>
+            <span className={`blockstrip__left num ${blocks.current.closing ? 'pulse-live' : ''}`}>
+              {formatDuration(blocks.current.remainingMs)}
+            </span>
+          </>
+        ) : (
+          <>
+            <span className="blockstrip__tag num is-idle">
+              {blocks.next ? `BLOCK ${blocks.next.block.index}` : 'BLOCK 5'}
+            </span>
+            <span className="blockstrip__name is-idle">
+              {blocks.next ? blocks.next.block.name : 'LAST WATCH'}
+            </span>
+            <span className="blockstrip__left num is-idle">
+              {phase === 'PRE'
+                ? 'unopened'
+                : blocks.next
+                  ? `in ${formatDuration(blocks.next.opensInMs)}`
+                  : 'sealed'}
+            </span>
+          </>
+        )}
+      </div>
+
+      <div className={`relative mt-3 ${windowFlash === 'OPEN' ? 'window-open-flash' : ''}`}>
+        <BlockBar
+          blocks={blocks.all}
           dormant={phase === 'ACTIVE' && w.state === 'DORMANT'}
-          closing={w.closing}
-          variant={closed ? 'ash' : 'ember'}
-          label={`${formatDuration(w.remainingMs)} left in today's window`}
+          sealed={sealedBlock}
         />
       </div>
 
-      <div className="micro mt-4 flex justify-between text-bone-dim">
+      <div className="micro mt-3 flex justify-between text-bone-dim">
         <span>{w.state === 'DORMANT' || phase === 'PRE' ? 'Opens 6:00 AM' : 'Opened 6:00 AM'}</span>
         <span>{closed ? 'Closed 10:00 PM' : 'Closes 10:00 PM'}</span>
       </div>

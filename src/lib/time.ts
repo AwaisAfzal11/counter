@@ -1,4 +1,14 @@
-import { ACTS, CAMPAIGN, DOCTRINE, MILESTONES, type Act } from './constants';
+import {
+  ACTS,
+  BLOCKS,
+  BLOCKS_PER_DAY,
+  CAMPAIGN,
+  DOCTRINE,
+  MILESTONES,
+  TOTAL_BLOCKS,
+  type Act,
+  type Block,
+} from './constants';
 
 export const MS_PER_SECOND = 1_000;
 export const MS_PER_MINUTE = 60_000;
@@ -15,6 +25,10 @@ export const TOTAL_WINDOW_MS = CAMPAIGN.TOTAL_WINDOW_HOURS * MS_PER_HOUR;
 export type WindowState = 'DORMANT' | 'OPEN' | 'CLOSED';
 export type Phase = 'PRE' | 'ACTIVE' | 'POST';
 export type DayState = 'SPENT' | 'TODAY' | 'AHEAD';
+export type BlockState = 'SPENT' | 'ACTIVE' | 'AHEAD';
+
+/** A block flags itself as closing for its final quarter-hour, whatever its length. */
+export const BLOCK_CLOSING_MS = 15 * MS_PER_MINUTE;
 
 export interface PktParts {
   year: number;
@@ -22,6 +36,32 @@ export interface PktParts {
   date: number;
   /** 0 = Sunday … 6 = Saturday */
   weekday: number;
+}
+
+export interface BlockProgress {
+  block: Block;
+  state: BlockState;
+  remainingMs: number;
+  /** 1 → 0 across this block's own span. This is what one bar segment renders. */
+  remainingFraction: number;
+  /** ms until it opens. 0 once it has opened, and outside an active campaign. */
+  opensInMs: number;
+  /** true in the block's final 15 minutes */
+  closing: boolean;
+}
+
+export interface BlockLedger {
+  /** All five, always — a partial ledger would let a block go unaccounted for. */
+  all: BlockProgress[];
+  /** The block in progress, or null whenever the window is shut. */
+  current: BlockProgress | null;
+  /** The next block to open today, or null once the fifth is running or sealed. */
+  next: BlockProgress | null;
+  spentToday: number;
+  /** Counts the one in progress — it is not yours until it is sealed. */
+  remainingToday: number;
+  /** Out of 790. Steps down five times a day and never once goes up. */
+  remainingCampaign: number;
 }
 
 export interface CampaignState {
@@ -33,6 +73,8 @@ export interface CampaignState {
   daysAhead: number;
   /** PKT weekday index of the campaign day, 0 = Sunday. */
   weekday: number;
+  /** PKT calendar parts of the campaign day — the date stamp under the counter. */
+  today: PktParts;
   /** ms until the campaign opens. 0 unless phase is PRE. */
   startsInMs: number;
   window: {
@@ -46,6 +88,7 @@ export interface CampaignState {
     /** true below 2 hours remaining */
     closing: boolean;
   };
+  blocks: BlockLedger;
   battle: {
     index: number;
     dayInBattle: number;
@@ -124,6 +167,55 @@ export function battleLength(battleIndex: number): number {
   return battleIndex === 23 ? 4 : 7;
 }
 
+/**
+ * The block twin of `getDayState` — the single source of colour truth for every
+ * block-shaped node: bar segments, ledger rows, the nested-pressure row. One
+ * function, so a block can never read SPENT in one place and AHEAD in another.
+ */
+export function getBlockState(block: Block, t: number, midnight: number, phase: Phase): BlockState {
+  if (phase === 'PRE') return 'AHEAD';
+  if (phase === 'POST') return 'SPENT';
+  if (t < midnight + block.startHour * MS_PER_HOUR) return 'AHEAD';
+  if (t < midnight + block.endHour * MS_PER_HOUR) return 'ACTIVE';
+  return 'SPENT';
+}
+
+/** Today's five blocks, resolved against an instant. Pure. */
+export function computeBlocks(
+  t: number,
+  midnight: number,
+  phase: Phase,
+): Omit<BlockLedger, 'remainingCampaign'> {
+  const all = BLOCKS.map<BlockProgress>((block) => {
+    const state = getBlockState(block, t, midnight, phase);
+    const spanMs = block.hours * MS_PER_HOUR;
+    const remainingMs =
+      state === 'SPENT' ? 0 : state === 'AHEAD' ? spanMs : midnight + block.endHour * MS_PER_HOUR - t;
+
+    return {
+      block,
+      state,
+      remainingMs,
+      remainingFraction: remainingMs / spanMs,
+      opensInMs:
+        state === 'AHEAD' && phase === 'ACTIVE'
+          ? midnight + block.startHour * MS_PER_HOUR - t
+          : 0,
+      closing: state === 'ACTIVE' && remainingMs <= BLOCK_CLOSING_MS,
+    };
+  });
+
+  const spentToday = all.filter((b) => b.state === 'SPENT').length;
+
+  return {
+    all,
+    current: all.find((b) => b.state === 'ACTIVE') ?? null,
+    next: all.find((b) => b.state === 'AHEAD') ?? null,
+    spentToday,
+    remainingToday: BLOCKS_PER_DAY - spentToday,
+  };
+}
+
 /** Pure: takes an instant, returns all derived campaign state. No side effects. */
 export function computeCampaignState(now: Date): CampaignState {
   const t = now.getTime();
@@ -146,6 +238,9 @@ export function computeCampaignState(now: Date): CampaignState {
   const windowRemainingMs = windowState === 'OPEN' ? closesAt - t : 0;
   const remainingFraction = windowRemainingMs / WINDOW_MS_PER_DAY;
   const opensInMs = windowState === 'DORMANT' ? opensAt - t : 0;
+
+  // ── The five blocks ───────────────────────────────────────────────────────
+  const blocks = computeBlocks(t, midnight, phase);
 
   // ── Battles (weeks) ───────────────────────────────────────────────────────
   const battleIndex = Math.floor((dayIndex - 1) / 7) + 1;
@@ -179,6 +274,7 @@ export function computeCampaignState(now: Date): CampaignState {
     daysSealed,
     daysAhead,
     weekday: pktParts(midnight).weekday,
+    today: pktParts(midnight),
     startsInMs: phase === 'PRE' ? START_MS - t : 0,
     window: {
       state: windowState,
@@ -187,6 +283,17 @@ export function computeCampaignState(now: Date): CampaignState {
       remainingFraction,
       opensInMs,
       closing: windowState === 'OPEN' && windowRemainingMs <= 2 * MS_PER_HOUR,
+    },
+    blocks: {
+      ...blocks,
+      // Same convention as the campaign hours above: a dormant day counts whole,
+      // so the block count never jumps back up at 6:00 AM.
+      remainingCampaign:
+        phase === 'POST'
+          ? 0
+          : phase === 'PRE'
+            ? TOTAL_BLOCKS
+            : daysAhead * BLOCKS_PER_DAY + blocks.remainingToday,
     },
     battle: {
       index: battleIndex,

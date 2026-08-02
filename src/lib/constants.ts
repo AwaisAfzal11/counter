@@ -9,6 +9,85 @@ export const CAMPAIGN = {
   TOTAL_WINDOW_HOURS: 2528, // 158 × 16
 } as const;
 
+export interface Block {
+  /** 1-based. Blocks are numbered; Acts are roman — the two never read alike. */
+  index: number;
+  name: string;
+  /** PKT hour the block opens. */
+  startHour: number;
+  /** PKT hour the block seals. */
+  endHour: number;
+  hours: number;
+  range: string;
+  /** Bar treatment. Each block wears a different one so it is identifiable at a glance. */
+  variant: 'dawn' | 'ribs' | 'hatch' | 'bands' | 'dusk';
+  /** Why this block is not the optional one. Every block gets a reason. */
+  stake: string;
+}
+
+/**
+ * The window is not one undifferentiated 16-hour slab — it is five blocks with
+ * different shapes and different failure modes. 3 + 5 + 1 + 3 + 4 = 16, tiling
+ * 6:00 AM → 10:00 PM with no gap and no overlap. A gap would be an hour the app
+ * quietly forgives, and this app forgives nothing.
+ */
+export const BLOCKS: readonly Block[] = [
+  {
+    index: 1,
+    name: 'FIRST LIGHT',
+    startHour: 6,
+    endHour: 9,
+    hours: 3,
+    range: '6:00 — 9:00 AM',
+    variant: 'dawn',
+    stake: 'Sets the ceiling for the other four. Nothing later recovers a lost morning.',
+  },
+  {
+    index: 2,
+    name: 'THE MAIN ASSAULT',
+    startHour: 9,
+    endHour: 14,
+    hours: 5,
+    range: '9:00 AM — 2:00 PM',
+    variant: 'ribs',
+    stake: 'The largest ground you will hold today. Five hours, once, then never again.',
+  },
+  {
+    index: 3,
+    name: 'THE PIVOT',
+    startHour: 14,
+    endHour: 15,
+    hours: 1,
+    range: '2:00 — 3:00 PM',
+    variant: 'hatch',
+    stake: 'Short enough to skip. That is precisely how the days go missing.',
+  },
+  {
+    index: 4,
+    name: 'SECOND PUSH',
+    startHour: 15,
+    endHour: 18,
+    hours: 3,
+    range: '3:00 — 6:00 PM',
+    variant: 'bands',
+    stake: 'Ten hours are already ash. Half a day spent is not a day worked.',
+  },
+  {
+    index: 5,
+    name: 'LAST WATCH',
+    startHour: 18,
+    endHour: 22,
+    hours: 4,
+    range: '6:00 — 10:00 PM',
+    variant: 'dusk',
+    stake: 'Four hours nobody is watching. The record counts them exactly the same.',
+  },
+] as const;
+
+export const BLOCKS_PER_DAY = BLOCKS.length; // 5
+/** 158 × 5. Every one of them is spent whether or not it is used. */
+export const TOTAL_BLOCKS = CAMPAIGN.TOTAL_DAYS * BLOCKS_PER_DAY; // 790
+
 export interface Act {
   index: number;
   roman: string;
@@ -60,6 +139,8 @@ export const DOCTRINE: readonly string[] = [
   'Momentum compounds. So does its absence.',
   'The window does not care whether you are ready.',
   'There are 158 of these. This is one of them.',
+  'Five blocks a day. A skipped block is not rest, it is a fifth of a day burned.',
+  'The block you are standing in is the only one you can still affect.',
   'Difficulty is the terrain, not the verdict.',
   'Ambition without a clock is a hobby.',
   'Nobody is coming. That is the whole advantage.',
